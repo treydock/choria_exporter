@@ -20,7 +20,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
-	"github.com/treydock/mcollective_exporter/collectors"
+	"github.com/treydock/mcollective_exporter/collector"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -39,7 +39,7 @@ func mcollectiveHandler() http.HandlerFunc {
 			return
 		}
 
-		mcollectiveCollector := collectors.NewMcollectiveCollector(host)
+		mcollectiveCollector := collector.NewMcollectiveCollector(host)
 		for key, collector := range mcollectiveCollector.Collectors {
 			log.Debugf("Enabled collector %s", key)
 			registry.MustRegister(collector)
