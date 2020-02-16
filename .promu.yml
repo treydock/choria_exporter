@@ -2,10 +2,10 @@ go:
   version: 1.13
   cgo: false
 repository:
-    path: github.com/treydock/mcollective_exporter
+    path: github.com/treydock/choria_exporter
 build:
     binaries:
-        - name: mcollective_exporter
+        - name: choria_exporter
           path: .
     flags: -a -tags netgo
     ldflags: |

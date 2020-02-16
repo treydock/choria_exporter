@@ -24,7 +24,7 @@ import (
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
-	"github.com/treydock/mcollective_exporter/collector"
+	"github.com/treydock/choria_exporter/collector"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -33,18 +33,18 @@ var (
 	disableExporterMetrics = kingpin.Flag("web.disable-exporter-metrics", "Exclude metrics about the exporter (promhttp_*, process_*, go_*)").Default("false").Bool()
 )
 
-func mcollectiveHandler(logger log.Logger) http.HandlerFunc {
+func choriaHandler(logger log.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		registry := prometheus.NewRegistry()
 
-		host := r.URL.Query().Get("host")
-		if host == "" {
-			http.Error(w, "'host' parameter must be specified", 400)
+		identity := r.URL.Query().Get("identity")
+		if identity == "" {
+			http.Error(w, "'identity' parameter must be specified", 400)
 			return
 		}
 
-		mcollectiveCollector := collector.NewMcollectiveCollector(logger, host)
-		for key, collector := range mcollectiveCollector.Collectors {
+		choriaCollector := collector.NewChoriaCollector(logger, identity)
+		for key, collector := range choriaCollector.Collectors {
 			level.Debug(logger).Log("msg", "Enabled collector", "collector", key)
 			registry.MustRegister(collector)
 		}
@@ -63,21 +63,21 @@ func mcollectiveHandler(logger log.Logger) http.HandlerFunc {
 func main() {
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
-	kingpin.Version(version.Print("mcollective_exporter"))
+	kingpin.Version(version.Print("choria_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
 	logger := promlog.New(promlogConfig)
-	level.Info(logger).Log("msg", "Starting mcollective_exporter", "version", version.Info())
+	level.Info(logger).Log("msg", "Starting choria_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
 	level.Info(logger).Log("msg", "Starting Server", "address", *listenAddr)
 
-	http.Handle("/metrics", mcollectiveHandler(logger))
+	http.Handle("/metrics", choriaHandler(logger))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
-             <head><title>mcollective Exporter</title></head>
+             <head><title>choria Exporter</title></head>
              <body>
-             <h1>mcollective Metrics Exporter</h1>
+             <h1>choria Metrics Exporter</h1>
              <p><a href='/metrics'>Metrics</a></p>
              </body>
              </html>`))

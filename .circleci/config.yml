@@ -22,7 +22,7 @@ jobs:
     - codecov/upload:
         file: coverage.txt
     - prometheus/store_artifact:
-        file: mcollective_exporter
+        file: choria_exporter
   build:
     machine:
       image: ubuntu-1604:201903-01
@@ -49,7 +49,7 @@ jobs:
         path: .tarballs
 workflows:
   version: 2
-  mcollective_exporter:
+  choria_exporter:
     jobs:
     - test:
         filters:

@@ -25,13 +25,13 @@ import (
 )
 
 const (
-	namespace = "mcollective"
+	namespace = "choria"
 )
 
 var (
 	mcoPath         = kingpin.Flag("path.mco", "Path to mco").Default("/opt/puppetlabs/bin/mco").String()
 	collectorState  = make(map[string]*bool)
-	factories       = make(map[string]func(logger log.Logger, host string) Collector)
+	factories       = make(map[string]func(logger log.Logger, identity string) Collector)
 	execCommand     = exec.Command
 	collectDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "collector_duration_seconds"),
@@ -43,7 +43,7 @@ var (
 		[]string{"collector"}, nil)
 )
 
-type McollectiveCollector struct {
+type ChoriaCollector struct {
 	Collectors map[string]Collector
 }
 
@@ -53,7 +53,7 @@ type Collector interface {
 	Collect(ch chan<- prometheus.Metric)
 }
 
-func registerCollector(collector string, isDefaultEnabled bool, factory func(logger log.Logger, host string) Collector) {
+func registerCollector(collector string, isDefaultEnabled bool, factory func(logger log.Logger, identity string) Collector) {
 	var helpDefaultState string
 	if isDefaultEnabled {
 		helpDefaultState = "enabled"
@@ -68,7 +68,7 @@ func registerCollector(collector string, isDefaultEnabled bool, factory func(log
 	factories[collector] = factory
 }
 
-func NewMcollectiveCollector(logger log.Logger, host string) *McollectiveCollector {
+func NewChoriaCollector(logger log.Logger, identity string) *ChoriaCollector {
 	if !fileExists(*mcoPath) {
 		level.Error(logger).Log("error", fmt.Sprintf("Path %s for mco does not exist", *mcoPath))
 		os.Exit(1)
@@ -77,11 +77,11 @@ func NewMcollectiveCollector(logger log.Logger, host string) *McollectiveCollect
 	for key, enabled := range collectorState {
 		var collector Collector
 		if *enabled {
-			collector = factories[key](logger, host)
+			collector = factories[key](logger, identity)
 			collectors[key] = collector
 		}
 	}
-	return &McollectiveCollector{Collectors: collectors}
+	return &ChoriaCollector{Collectors: collectors}
 }
 
 func fileExists(filename string) bool {

@@ -4,7 +4,7 @@ DOCKER_REPO	 ?= treydock
 
 include Makefile.common
 
-DOCKER_IMAGE_NAME ?= mcollective_exporter
+DOCKER_IMAGE_NAME ?= choria_exporter
 
 coverage:
 	go test -race -coverpkg=./... -coverprofile=coverage.txt -covermode=atomic ./...

@@ -1,4 +1,4 @@
-module github.com/treydock/mcollective_exporter
+module github.com/treydock/choria_exporter
 
 go 1.13
 

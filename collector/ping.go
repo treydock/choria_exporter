@@ -36,24 +36,24 @@ type PingMetric struct {
 }
 
 type PingCollector struct {
-	logger log.Logger
-	host   string
-	Status *prometheus.Desc
-	Time   *prometheus.Desc
+	logger   log.Logger
+	identity string
+	Status   *prometheus.Desc
+	Time     *prometheus.Desc
 }
 
 func init() {
 	registerCollector("ping", true, NewPingCollector)
 }
 
-func NewPingCollector(logger log.Logger, host string) Collector {
+func NewPingCollector(logger log.Logger, identity string) Collector {
 	return &PingCollector{
-		logger: logger,
-		host:   host,
+		logger:   logger,
+		identity: identity,
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "ping", "status"),
-			"Mcollective ping status, 1=successful 0=not successful", nil, nil),
+			"mco ping status, 1=successful 0=not successful", nil, nil),
 		Time: prometheus.NewDesc(prometheus.BuildFQName(namespace, "ping", "seconds"),
-			"Mcollective ping time in seconds", nil, nil),
+			"mco ping time in seconds", nil, nil),
 	}
 }
 
@@ -74,7 +74,7 @@ func (c *PingCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *PingCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	metric, err := ping(c.logger, c.host)
+	metric, err := ping(c.logger, c.identity)
 	if err != nil {
 		return err
 	}
@@ -84,11 +84,11 @@ func (c *PingCollector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func ping(logger log.Logger, host string) (PingMetric, error) {
+func ping(logger log.Logger, identity string) (PingMetric, error) {
 	var metric PingMetric
 	mco := *mcoPath
 	timeout := *configPingTimeout
-	cmd := execCommand(mco, "ping", "--timeout", timeout, "-I", host)
+	cmd := execCommand(mco, "ping", "--timeout", timeout, "-I", identity)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -105,7 +105,7 @@ func ping(logger log.Logger, host string) (PingMetric, error) {
 	if len(timeMatch) == 3 {
 		time, err := strconv.ParseFloat(timeMatch[1], 64)
 		if err != nil {
-			level.Error(logger).Log("error", fmt.Sprintf("Error parsing time %s for %s: %s", outlog, host, err.Error()))
+			level.Error(logger).Log("error", fmt.Sprintf("Error parsing time %s for %s: %s", outlog, identity, err.Error()))
 			return metric, err
 		}
 		unit := timeMatch[2]
