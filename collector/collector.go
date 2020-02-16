@@ -18,8 +18,9 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -30,7 +31,7 @@ const (
 var (
 	mcoPath         = kingpin.Flag("path.mco", "Path to mco").Default("/opt/puppetlabs/bin/mco").String()
 	collectorState  = make(map[string]*bool)
-	factories       = make(map[string]func(host string) Collector)
+	factories       = make(map[string]func(logger log.Logger, host string) Collector)
 	execCommand     = exec.Command
 	collectDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "collector_duration_seconds"),
@@ -52,7 +53,7 @@ type Collector interface {
 	Collect(ch chan<- prometheus.Metric)
 }
 
-func registerCollector(collector string, isDefaultEnabled bool, factory func(host string) Collector) {
+func registerCollector(collector string, isDefaultEnabled bool, factory func(logger log.Logger, host string) Collector) {
 	var helpDefaultState string
 	if isDefaultEnabled {
 		helpDefaultState = "enabled"
@@ -67,15 +68,16 @@ func registerCollector(collector string, isDefaultEnabled bool, factory func(hos
 	factories[collector] = factory
 }
 
-func NewMcollectiveCollector(host string) *McollectiveCollector {
+func NewMcollectiveCollector(logger log.Logger, host string) *McollectiveCollector {
 	if !fileExists(*mcoPath) {
-		log.Fatalf("Path %s for mco does not exist", *mcoPath)
+		level.Error(logger).Log("error", fmt.Sprintf("Path %s for mco does not exist", *mcoPath))
+		os.Exit(1)
 	}
 	collectors := make(map[string]Collector)
 	for key, enabled := range collectorState {
 		var collector Collector
 		if *enabled {
-			collector = factories[key](host)
+			collector = factories[key](logger, host)
 			collectors[key] = collector
 		}
 	}

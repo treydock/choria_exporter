@@ -15,12 +15,14 @@ package collector
 
 import (
 	"bytes"
+	"fmt"
 	"regexp"
 	"strconv"
 	"time"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -34,6 +36,7 @@ type PingMetric struct {
 }
 
 type PingCollector struct {
+	logger log.Logger
 	host   string
 	Status *prometheus.Desc
 	Time   *prometheus.Desc
@@ -43,9 +46,10 @@ func init() {
 	registerCollector("ping", true, NewPingCollector)
 }
 
-func NewPingCollector(host string) Collector {
+func NewPingCollector(logger log.Logger, host string) Collector {
 	return &PingCollector{
-		host: host,
+		logger: logger,
+		host:   host,
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "ping", "status"),
 			"Mcollective ping status, 1=successful 0=not successful", nil, nil),
 		Time: prometheus.NewDesc(prometheus.BuildFQName(namespace, "ping", "seconds"),
@@ -59,7 +63,7 @@ func (c *PingCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *PingCollector) Collect(ch chan<- prometheus.Metric) {
-	log.Debug("Collecting ping metric")
+	level.Debug(c.logger).Log("msg", "Collecting ping metric")
 	err := c.collect(ch)
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "ping")
@@ -70,7 +74,7 @@ func (c *PingCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *PingCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	metric, err := ping(c.host)
+	metric, err := ping(c.logger, c.host)
 	if err != nil {
 		return err
 	}
@@ -80,7 +84,7 @@ func (c *PingCollector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func ping(host string) (PingMetric, error) {
+func ping(logger log.Logger, host string) (PingMetric, error) {
 	var metric PingMetric
 	mco := *mcoPath
 	timeout := *configPingTimeout
@@ -91,7 +95,7 @@ func ping(host string) (PingMetric, error) {
 	re := regexp.MustCompile(`\r?\n`)
 	outlog := re.ReplaceAllString(out.String(), " ")
 	if err != nil {
-		log.Errorf("PING: %s : %s", outlog, err)
+		level.Error(logger).Log("error", fmt.Sprintf("PING: %s : %s", outlog, err))
 		metric.Status = 0
 	} else {
 		metric.Status = 1
@@ -101,7 +105,7 @@ func ping(host string) (PingMetric, error) {
 	if len(timeMatch) == 3 {
 		time, err := strconv.ParseFloat(timeMatch[1], 64)
 		if err != nil {
-			log.Errorf("Error parsing time %s for %s: %s", outlog, host, err.Error())
+			level.Error(logger).Log("error", fmt.Sprintf("Error parsing time %s for %s: %s", outlog, host, err.Error()))
 			return metric, err
 		}
 		unit := timeMatch[2]

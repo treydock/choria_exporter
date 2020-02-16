@@ -14,6 +14,7 @@
 package collector
 
 import (
+	"github.com/go-kit/kit/log"
 	"os/exec"
 	"testing"
 )
@@ -28,7 +29,8 @@ prometheus               time=55.63 ms
 1 replies max: 55.63 min: 55.63 avg: 55.63 
 `
 	defer func() { execCommand = exec.Command }()
-	metric, err := ping("prometheus")
+	var logger log.Logger
+	metric, err := ping(logger, "prometheus")
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
