@@ -1,0 +1,6 @@
+/.tarballs
+/.build
+/mcollective_exporter
+/c.out
+/coverage.html
+/coverage.txt
